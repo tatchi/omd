@@ -970,7 +970,7 @@ module Pre = struct
           | (Emph (_, post, q2, n2) as x) :: xs when is_closer x && q1 = q2 ->
               let xs =
                 if n1 >= 2 && n2 >= 2 then
-                  if n2 > 2 then Emph (Punct, post, q2, n2 - 2) :: xs else xs
+                  if n2 > 2 then Emph (Other, post, q2, n2 - 2) :: xs else xs
                 else if n2 > 1 then Emph (Punct, post, q2, n2 - 1) :: xs
                 else xs
               in
@@ -981,7 +981,7 @@ module Pre = struct
               in
               let r =
                 if n1 >= 2 && n2 >= 2 then
-                  if n1 > 2 then Emph (pre, Punct, q1, n1 - 2) :: r else r
+                  if n1 > 2 then Emph (pre, Other, q1, n1 - 2) :: r else r
                 else if n1 > 1 then Emph (pre, Punct, q1, n1 - 1) :: r
                 else r
               in
