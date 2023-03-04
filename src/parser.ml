@@ -875,6 +875,7 @@ module Pre = struct
     | R of attributes inline
 
   let concat = function [ x ] -> x | l -> Concat ([], l)
+  let string_of_emph_style = function Star -> "*" | Underscore -> "_"
 
   let left_flanking = function
     | Emph (_, Other, _, _) | Emph ((Ws | Punct), Punct, _, _) -> true
@@ -1000,8 +1001,12 @@ module Pre = struct
                 in
                 let r =
                   let il = concat (List.map to_r (List.rev acc)) in
-                  if n1 >= 2 && n2 >= 2 then R (Strong ([], il)) :: xs
-                  else R (Emph ([], il)) :: xs
+                  if n1 >= 2 && n2 >= 2 then
+                    R (Strong ([ ("emph_style", string_of_emph_style q1) ], il))
+                    :: xs
+                  else
+                    R (Emph ([ ("emph_style", string_of_emph_style q1) ], il))
+                    :: xs
                 in
                 let r =
                   if n1 >= 2 && n2 >= 2 then
