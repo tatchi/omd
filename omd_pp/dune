@@ -1,0 +1,3 @@
+(executable
+ (name omd_pp)
+ (libraries str omd))

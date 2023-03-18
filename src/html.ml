@@ -44,7 +44,13 @@ let htmlentities s =
   loop 0
 
 let add_attrs_to_buffer buf attrs =
-  let f (k, v) = Printf.bprintf buf " %s=\"%s\"" k (htmlentities v) in
+  let f (k, v) =
+    match k with
+    | "emph_style" | "heading_type" | "len" -> ()
+    | k ->
+        Printf.printf "print attribute\n";
+        Printf.bprintf buf " %s=\"%s\"" k (htmlentities v)
+  in
   List.iter f attrs
 
 let rec add_to_buffer buf = function
