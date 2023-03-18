@@ -47,9 +47,7 @@ let add_attrs_to_buffer buf attrs =
   let f (k, v) =
     match k with
     | "emph_style" | "heading_type" | "len" -> ()
-    | k ->
-        Printf.printf "print attribute\n";
-        Printf.bprintf buf " %s=\"%s\"" k (htmlentities v)
+    | k -> Printf.bprintf buf " %s=\"%s\"" k (htmlentities v)
   in
   List.iter f attrs
 

@@ -136,7 +136,7 @@ and block ?(tight = false) ?(list = None) ppf = function
             il
             attributes
             attrs
-            (String.make (int_of_string len) '=')
+            (String.make (int_of_string len) (if size = 1 then '=' else '-'))
       | _ -> assert false)
   | Code_block (attrs, lang, code) -> (
       let len = String.length code in

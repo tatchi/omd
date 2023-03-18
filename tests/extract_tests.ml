@@ -10,6 +10,88 @@ let protect ~finally f =
 
 let disabled = []
 
+(* Some pp tests won't work because of escaping characters *)
+(* dune test 2>&1 | awk '/File/ {print $2}' | sed -e "s/[^0-9]//g" | tr -d "\n" "," *)
+let pp_disabled =
+  [ 65
+  ; (* see above *)
+    98
+  ; (* Code in blockquote weirdness *)
+    222
+  ; (* Code in blockquote using indentation only! *)
+    511
+  ; 006
+  ; 012
+  ; 014
+  ; 015
+  ; 017
+  ; 020
+  ; 026
+  ; 037
+  ; 038
+  ; 039
+  ; 040
+  ; 041
+  ; 049
+  ; 066
+  ; 070
+  ; 076
+  ; 087
+  ; 102
+  ; 106
+  ; 128
+  ; 174
+  ; 175
+  ; 194
+  ; 195
+  ; 202
+  ; 228
+  ; 229
+  ; 230
+  ; 232
+  ; 236
+  ; 238
+  ; 244
+  ; 252
+  ; 255
+  ; 259
+  ; 260
+  ; 264
+  ; 276
+  ; 312
+  ; 319
+  ; 320
+  ; 321
+  ; 324
+  ; 325
+  ; 329
+  ; 330
+  ; 331
+  ; 339
+  ; 346
+  ; 349
+  ; 436
+  ; 439
+  ; 448
+  ; 451
+  ; 488
+  ; 492
+  ; 505
+  ; 508
+  ; 514
+  ; 525
+  ; 528
+  ; 531
+  ; 532
+  ; 537
+  ; 549
+  ; 592
+  ; 602
+  ; 605
+  ]
+
+let pp_disabled_filename = [ "gfm_table_spec"; "extra_table_test"; "def_list" ]
+
 let with_open_in fn f =
   let ic = open_in fn in
   protect ~finally:(fun () -> close_in_noerr ic) (fun () -> f ic)
@@ -94,6 +176,26 @@ let write_dune_file test_specs tests =
         example
         base
         example;
+      if
+        not
+          (List.mem example pp_disabled
+          || pp_disabled_filename
+             |> List.exists (fun pp_disabled_filename ->
+                    String.starts_with ~prefix:pp_disabled_filename filename))
+      then
+        Format.printf
+          "@[<v1>(rule@ @[<hov1>(action@ @[<hov1>(progn \
+           @[<hov1>(with-stdout-to %s-%03d.md.pp@ @[<hov1>(run@ ./omd_pp.exe \
+           print %%{dep:%s-%03d.md}))@]@ (with-stdout-to %s-%03d.html.pp.new@ \
+           @[<hov1>(run@ ./omd_pp.exe html@ %s-%03d.md.pp)@])@])@])@])@]@."
+          base
+          example
+          base
+          example
+          base
+          example
+          base
+          example;
       Format.printf
         "@[<v1>(rule@ @[<hov1>(alias %s-%03d)@]@ @[<hov1>(action@ \
          @[<hov1>(diff@ %s-%03d.html %s-%03d.html.new)@])@])@]@."
@@ -102,7 +204,23 @@ let write_dune_file test_specs tests =
         base
         example
         base
-        example)
+        example;
+      if
+        not
+          (List.mem example pp_disabled
+          || pp_disabled_filename
+             |> List.exists (fun pp_disabled_filename ->
+                    String.starts_with ~prefix:pp_disabled_filename filename))
+      then
+        Format.printf
+          "@[<v1>(rule@ @[<hov1>(alias %s-%03d)@]@ @[<hov1>(action@ \
+           @[<hov1>(diff@ %s-%03d.html %s-%03d.html.pp.new)@])@])@]@."
+          base
+          example
+          base
+          example
+          base
+          example)
     tests;
   let pp ppf { filename; example; _ } =
     let base = Filename.remove_extension filename in
