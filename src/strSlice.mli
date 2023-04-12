@@ -1,6 +1,6 @@
 (* Implementation of string slices over a base string via an offset *)
 
-type t
+type t [@@deriving show]
 
 val of_string : ?off:int -> string -> t
 val to_string : t -> string

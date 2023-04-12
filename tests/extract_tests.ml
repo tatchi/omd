@@ -176,7 +176,7 @@ let write_dune_file test_specs tests =
         example
         base
         example;
-      if
+      (* if
         not
           (List.mem example pp_disabled
           || pp_disabled_filename
@@ -195,7 +195,7 @@ let write_dune_file test_specs tests =
           base
           example
           base
-          example;
+          example; *)
       Format.printf
         "@[<v1>(rule@ @[<hov1>(alias %s-%03d)@]@ @[<hov1>(action@ \
          @[<hov1>(diff@ %s-%03d.html %s-%03d.html.new)@])@])@]@."
@@ -205,7 +205,7 @@ let write_dune_file test_specs tests =
         example
         base
         example;
-      if
+      (* if
         not
           (List.mem example pp_disabled
           || pp_disabled_filename
@@ -220,7 +220,9 @@ let write_dune_file test_specs tests =
           base
           example
           base
-          example)
+          example *)
+          
+          )
     tests;
   let pp ppf { filename; example; _ } =
     let base = Filename.remove_extension filename in

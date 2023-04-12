@@ -86,7 +86,11 @@ module Pre = struct
   and finish link_defs state = List.rev (close link_defs state)
 
   let empty = { blocks = []; next = Rempty }
-  let classify_line s = Parser.parse s
+  let classify_line s = 
+    Log.print "[classify_line] s = %s" (StrSlice.show s);
+    let res = Parser.parse s in
+    Log.print "[classify_line] result = %s" (Parser.show res);
+    res
 
   let classify_delimiter s =
     let left, s =
@@ -317,10 +321,13 @@ module Pre = struct
   let process link_defs state s = process link_defs state (StrSlice.of_string s)
 
   let of_channel ic =
+    Log.print "[block_parser] of_channel";
     let link_defs = ref [] in
     let rec loop state =
       match input_line ic with
-      | s -> loop (process link_defs state s)
+      | s -> 
+        Log.print "[of_channel] read a line: %s" s;
+        loop (process link_defs state s)
       | exception End_of_file ->
           let blocks = finish link_defs state in
           (blocks, List.rev !link_defs)
@@ -345,6 +352,7 @@ module Pre = struct
     loop false off
 
   let of_string s =
+    Log.print "[block_parser] of_string";
     let link_defs = ref [] in
     let rec loop state = function
       | None ->

@@ -4,7 +4,7 @@ type t =
   { base : string
   ; off : int
   ; len : int
-  }
+  } [@@deriving show]
 
 let of_string ?(off = 0) base = { base; off; len = String.length base - off }
 let to_string { base; off; len } = String.sub base off len

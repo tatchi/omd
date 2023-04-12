@@ -1,23 +1,25 @@
 module type BlockContent = sig
-  type 'a t
+  type 'a t [@@deriving show]
 end
 
 module StringContent = struct
-  type 'attr t = string
+  type 'attr t = string [@@deriving show]
 end
 
 module InlineContent = struct
-  type 'attr t = 'attr Ast_inline.inline
+  type 'attr t = 'attr Ast_inline.inline [@@deriving show]
 end
 
 module List_types = struct
   type list_type =
     | Ordered of int * char
     | Bullet of char
+  [@@deriving show]
 
   type list_spacing =
     | Loose
     | Tight
+  [@@deriving show]
 end
 
 module Table_alignments = struct
@@ -26,6 +28,7 @@ module Table_alignments = struct
     | Left
     | Centre
     | Right
+  [@@deriving show]
 end
 
 open List_types
@@ -36,6 +39,7 @@ module Make (C : BlockContent) = struct
     { term : 'attr C.t
     ; defs : 'attr C.t list
     }
+  [@@deriving show]
 
   (* A value of type 'attr is present in all variants of this type. We use it to associate
      extra information to each node in the AST. Cn the common case, the attributes type defined
@@ -53,6 +57,7 @@ module Make (C : BlockContent) = struct
     | Table of 'attr * ('attr C.t * cell_alignment) list * 'attr C.t list list
         (** A table is represented by a header row, which is a list of pairs of
             header cells and alignments, and a list of rows *)
+  [@@deriving show]
 end
 
 module MakeMapper (Src : BlockContent) (Dst : BlockContent) = struct

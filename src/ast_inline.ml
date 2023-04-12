@@ -16,9 +16,11 @@ type 'attr inline =
   | Link of 'attr * 'attr link
   | Image of 'attr * 'attr link
   | Html of 'attr * string
+[@@deriving show]
 
 and 'attr link =
   { label : 'attr inline
   ; destination : string
   ; title : string option
   }
+[@@deriving show]

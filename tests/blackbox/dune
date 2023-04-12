@@ -1,2 +1,17 @@
 (cram
  (deps %{bin:omd}))
+
+(env
+ (_
+  ; (env-vars
+  ;  (enable_log false))
+  (binaries ../omd_pp.exe)))
+
+(cram
+ (applies_to coco)
+ (deps %{bin:omd_pp}))
+
+; (env
+;  (_
+;   (binaries
+;    (../omd_pp.exe as omd_print))))

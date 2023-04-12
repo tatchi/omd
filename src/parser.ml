@@ -7,6 +7,7 @@ type 'attr link_def =
   ; title : string option
   ; attributes : 'attr
   }
+[@@deriving show]
 
 let is_whitespace = function
   | ' ' | '\t' | '\010' .. '\013' -> true
@@ -25,8 +26,13 @@ exception Fail
 
 (** Stateful parser combinators *)
 module P : sig
-  type state
-  type 'a t = state -> 'a
+  type state =
+    { str : string
+    ; mutable pos : int
+    }
+  [@@deriving show]
+
+  type 'a t = state -> 'a [@@deriving show]
 
   val of_string : string -> state
 
@@ -101,10 +107,11 @@ end = struct
     { str : string
     ; mutable pos : int
     }
+  [@@deriving show]
 
   let of_string str = { str; pos = 0 }
 
-  type 'a t = state -> 'a
+  type 'a t = state -> 'a [@@deriving show]
 
   let char c st =
     if st.pos >= String.length st.str then raise Fail
@@ -188,10 +195,12 @@ end
 type html_kind =
   | Hcontains of string list
   | Hblank
+[@@deriving show]
 
 type code_block_kind =
   | Tilde
   | Backtick
+[@@deriving show]
 
 type t =
   | Lempty
@@ -209,6 +218,7 @@ type t =
   | Lparagraph
   | Ldef_list of string
   | Ltable_line of StrSlice.t list
+[@@deriving show]
 
 (* drop up to 3 spaces, returning the number of spaces dropped and the remainder of the string *)
 let sp3 s =
@@ -775,6 +785,7 @@ let table_row ~pipe_prefix s =
   | _ -> raise Fail
 
 let parse s0 =
+  Log.print "[Parser.parse] s0 = %s" (StrSlice.to_string s0);
   let ind, s = sp3 s0 in
   match StrSlice.head s with
   | Some '>' ->
@@ -789,7 +800,9 @@ let parse s0 =
       ||| table_row ~pipe_prefix:false)
         s
   | Some '_' -> thematic_break s
-  | Some '#' -> atx_heading s
+  | Some '#' ->
+      Log.print "parsed # -> atx_heading";
+      atx_heading s
   | Some ('~' | '`') -> fenced_code ind s
   | Some '<' -> raw_html s
   | Some '*' -> (thematic_break ||| unordered_list_item ind) s
@@ -798,10 +811,19 @@ let parse s0 =
       (ordered_list_item ind ||| table_row ~pipe_prefix:false) s
   | Some ':' -> (def_list ||| table_row ~pipe_prefix:false) s
   | Some '|' -> table_row ~pipe_prefix:true (StrSlice.tail s)
-  | Some _ -> (blank ||| indented_code ind ||| table_row ~pipe_prefix:false) s
+  | Some _ ->
+      Log.print "parsed fallback";
+      (blank ||| indented_code ind ||| table_row ~pipe_prefix:false) s
   | None -> Lempty
 
-let parse s = try parse s with Fail -> Lparagraph
+let parse s =
+  try
+    let res = parse s in
+    Log.print "[parse] result = %s" (show res);
+    res
+  with Fail ->
+    Log.print "[parse] fail -> Lparagraph. s = %s" (StrSlice.show s);
+    Lparagraph
 
 open P
 
@@ -859,20 +881,24 @@ module Pre = struct
     | Ws
     | Punct
     | Other
+  [@@deriving show]
 
   type emph_style =
     | Star
     | Underscore
+  [@@deriving show]
 
   type link_kind =
     | Img
     | Url
+  [@@deriving show]
 
   type t =
     | Bang_left_bracket
     | Left_bracket of link_kind
     | Emph of delim * delim * emph_style * int
     | R of attributes inline
+  [@@deriving show]
 
   let concat = function [ x ] -> x | l -> Concat ([], l)
   let string_of_emph_style = function Star -> "*" | Underscore -> "_"
@@ -1047,6 +1073,7 @@ module Pre = struct
 end
 
 let escape buf st =
+  Log.print "escape";
   if next st <> '\\' then raise Fail;
   match peek st with
   | Some c when is_punct c ->
@@ -1191,6 +1218,7 @@ let list p st =
   loop ()
 
 let single_quoted_attribute st =
+  Log.print "in single_quoted_attribute";
   if next st <> '\'' then raise Fail;
   let rec loop () =
     match peek_exn st with
@@ -1230,6 +1258,7 @@ let unquoted_attribute st =
   loop 0
 
 let attribute_value st =
+  Log.print "attribute_value";
   match peek_exn st with
   | '\'' -> single_quoted_attribute st
   | '"' -> double_quoted_attribute st
@@ -1603,6 +1632,7 @@ let autolink st =
       junk st;
       let label, destination = (absolute_uri ||| email_address) st in
       if next st <> '>' then raise Fail;
+      Log.print "autolink; label = %s" label;
       { Ast.Impl.label = Text ([], label); destination; title = None }
   | _ -> raise Fail
 
@@ -1677,6 +1707,7 @@ let inline_pre buf acc st =
   gobble_open_backtick 0
 
 let rec inline defs st =
+  Log.print "[in inline] State.str = %s" st.str;
   let buf = Buffer.create 0 in
   let text acc = text buf acc in
   let rec reference_link kind acc st =
@@ -1696,7 +1727,7 @@ let rec inline defs st =
                 let def = { label = lab1; destination; title } in
                 match kind with
                 | Pre.Img -> Image (attr, def)
-                | Url -> Link (attr, def)
+                | Url -> Link (("link_type", "regular") :: attr, def)
               in
               loop (Pre.R r :: text acc) st
           | None ->
@@ -1736,7 +1767,10 @@ let rec inline defs st =
         match protect autolink st with
         | def ->
             let attr = inline_attribute_string st in
-            loop ~seen_link (Pre.R (Link (attr, def)) :: text acc) st
+            loop
+              ~seen_link
+              (Pre.R (Link (("link_type", "autolink") :: attr, def)) :: text acc)
+              st
         | exception Fail -> (
             match
               protect
@@ -1772,18 +1806,26 @@ let rec inline defs st =
             Buffer.add_char buf c;
             loop ~seen_link acc st)
     | '`' -> loop ~seen_link (inline_pre buf acc st) st
-    | '\\' as c -> (
+    | '\\' as c1 -> (
+        Log.print "IN! c = %c" c1;
         junk st;
         match peek st with
         | Some '\n' ->
+            Log.print "[1:newline]";
             junk st;
             loop ~seen_link (Pre.R (Hard_break []) :: text acc) st
         | Some c when is_punct c ->
             junk st;
+            Buffer.add_char buf c1;
             Buffer.add_char buf c;
+            Log.print
+              "[2:is_punct] c = %c; Buff content = %s"
+              c
+              (Buffer.contents buf);
             loop ~seen_link acc st
         | Some _ | None ->
-            Buffer.add_char buf c;
+            Log.print "[3:other]";
+            Buffer.add_char buf c1;
             loop ~seen_link acc st)
     | '!' as c -> (
         junk st;
@@ -1808,13 +1850,16 @@ let rec inline defs st =
               | Some '(' -> (
                   match protect inline_link st with
                   | destination, title ->
+                      Log.print
+                        "title = %s"
+                        (title |> Option.value ~default:"None");
                       let attr = inline_attribute_string st in
                       let r =
                         let label = Pre.parse_emph xs in
                         let def = { label; destination; title } in
                         match k with
                         | Img -> Image (attr, def)
-                        | Url -> Link (attr, def)
+                        | Url -> Link (("link_type", "regular") :: attr, def)
                       in
                       loop ~seen_link (Pre.R r :: acc') st
                   | exception Fail ->
@@ -1839,7 +1884,7 @@ let rec inline defs st =
                           let r =
                             match k with
                             | Img -> Image (attr, def)
-                            | Url -> Link (attr, def)
+                            | Url -> Link (("link_type", "reference") :: attr, def)
                           in
                           loop ~seen_link (Pre.R r :: acc') st
                       | None ->
@@ -1887,10 +1932,22 @@ let rec inline defs st =
     | _ as c ->
         junk st;
         Buffer.add_char buf c;
+        Log.print "in loop c = %c; buff content = %s" c (Buffer.contents buf);
         loop ~seen_link acc st
-    | exception Fail -> Pre.parse_emph (List.rev (text acc))
+    | exception Fail ->
+        let print_list fmt data =
+          Format.pp_print_list fmt Format.str_formatter data;
+          Format.flush_str_formatter ()
+        in
+        let res = text acc in
+        Log.print "[inline] end loop, acc = %s" ((print_list Pre.pp) res);
+
+        Pre.parse_emph (List.rev res)
   in
-  loop ~seen_link:false [] st
+  let res = loop ~seen_link:false [] st in
+  let show = show_inline pp_attributes in
+  Log.print "[inline] result = %s" (show res);
+  res
 
 let sp3 st =
   match peek_exn st with

@@ -1,6 +1,8 @@
 (library
  (name omd)
  (public_name omd)
+ (preprocess
+  (pps ppx_deriving.show))
  (libraries uutf uucp uunf stdcompat))
 
 (rule

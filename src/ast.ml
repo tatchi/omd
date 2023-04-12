@@ -4,8 +4,8 @@ module Impl = struct
   include Ast_block.Table_alignments
   include Ast_block.WithInline
 
-  type attributes = (string * string) list
-  type doc = attributes block list
+  type attributes = (string * string) list [@@deriving show]
+  type doc = attributes block list [@@deriving show]
 end
 
 module type Intf = module type of Impl
